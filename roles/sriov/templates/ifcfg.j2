@@ -1,0 +1,19 @@
+{% if item == "bond2" %}
+DEVICE={{ item }}
+ONBOOT=yes
+HOTPLUG=no
+NM_CONTROLLED=no
+PEERDNS=no
+BONDING_OPTS="mode=4 lacp_rate=1 updelay=1000 miimon=50"
+MTU=9000
+{% else %}
+DEVICE={{ item }}
+ONBOOT=yes
+HOTPLUG=no
+NM_CONTROLLED=no
+PEERDNS=no
+MASTER=bond2
+SLAVE=yes
+BOOTPROTO=none
+MTU=9000
+{% endif %}

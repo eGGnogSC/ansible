@@ -1,0 +1,23 @@
+---
+# This role applies the appropriate katello rpm to the remote machine and registers
+# the remote machine to the appropriate capsule server
+- name: "Unsubscribe from RedHat Satellite"
+  redhat_subscription:
+    state: absent
+- name: "Store existing katello RPM in var"
+  shell: "yum list installed | grep katello"
+  register: result
+- name: "Remove existing Katello RPM if found"
+  when: result.stdout != ""
+  yum:
+    name: "{{result.stdout}}"
+    state: absent
+- name: "Install Katello RPM"
+  yum:
+    name: "{{katello}}"
+    state: present
+- name: "Register to Capsule"
+  redhat_subscription:
+    state: present
+    org_id: {{org_id}}          # pick your poison on where to source the var from here
+    activationkey: {{act_key}}  # same as above

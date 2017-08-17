@@ -1,0 +1,8 @@
+---
+- name: "Get vDisk status"
+  hosts: 
+  gather_facts: no
+  tasks:
+  - raw: "racadm storage get vdisks"
+    register: result
+  - debug: var=result.stdout

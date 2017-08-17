@@ -1,0 +1,18 @@
+---
+- name: "Rebuild Raid VDs"
+  remote_user: corona
+  hosts: rad-cl-control-drac, rad-cl-compute-drac 
+  gather_facts: no
+  tasks:
+  - name: "Delete existing raid vd0"
+    raw: "racadm storage deletevd:Disk.Virtual.0:RAID.Integrated.1-1"
+    register: result
+  - debug: var=result.stdout
+  - name: "Delete raid vd1"
+    raw: "racadm storage deletevd:Disk.Virtual.1:RAID.Integrated.1-1"
+    register: result
+  - debug: var=result.stdout
+  - name: "Run job for delete"
+    raw: "racadm jobqueue create RAID.Integrated.1-1 -r pwrcycle"
+    register: result
+  - debug: var=result.stdout

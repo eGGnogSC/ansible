@@ -1,0 +1,5 @@
+---
+interfaces:
+  - p4p1
+  - p5p1
+  - bond2

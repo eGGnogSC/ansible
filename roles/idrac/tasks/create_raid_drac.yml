@@ -1,0 +1,21 @@
+---
+- name: "Rebuild Raid VDs"
+  hosts: 
+  gather_facts: no
+  tasks:
+  - name: "Create virtual disks on Controllers"
+    when: "'controller' in group_names"
+    raw: "racadm raid createvd:RAID.Integrated.1-1 -rl {{item.type}} -pdkey:{{item.physical}}"
+    register: result
+    with_items: {{controller}}
+  - debug: var=result.stdout
+  - name: "Create virtual disks on Compute nodes"
+    when: "'compute' in group_names"
+    raw: "racadm raid createvd:RAID.Integrated.1-1 -rl {{item.type}} -pdkey:{{item.physical}}"
+    register: result
+    with_items: {{compute}}
+  - debug: var=result.stdout
+  - name: "Run create job"
+    raw: "racadm jobqueue create RAID.Integrated.1-1 -r pwrcycle"
+    register: result
+  - debug: var=result.stdout

@@ -1,0 +1,44 @@
+---
+# Customized playbook for deploying netdata in VCP. This has been tested on a base instance using the
+# CentOS-7-Core image in the Richardson OpenStack cloud.
+
+# Tasks to complete:
+# -change the git task to pull from a local repo that will be stored on the new logging server
+
+- name: "Install pre-requisites"
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - unzip
+    - autoconf
+    - autogen
+    - automake
+    - curl
+    - gcc
+    - git
+    - libmnl-devel
+    - libuuid-devel
+    - make
+    - pkgconfig
+    - zlib-devel
+- name: "Unpack netdata archive"
+  unarchive:
+    src: netdata.tgz
+    dest: "/home/{{ ansible_user }}/"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0755
+- name: "Installation"
+  shell: "./netdata-installer.sh --dont-wait --libs-are-really-here chdir=/home/{{ ansible_user | quote }}/netdata executable=/bin/bash"
+- name: "Clean up files"
+  file:
+    path: "/home/{{ ansible_user }}/netdata"
+    state: absent
+- name: "KillAll"
+  shell: ps -o pid -u netdata | sed -n '1!p' | xargs kill -9
+- name: "Daemon config"
+  service:
+    name: netdata
+    enabled: yes
+    state: started

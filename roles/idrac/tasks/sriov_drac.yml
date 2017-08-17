@@ -1,0 +1,16 @@
+---
+- name: "Enable SRIOV in Compute Node BIOS"
+  hosts: 
+  gather_facts: no
+  tasks:
+  - name: "Set SR-IOV mode to Enabled"
+    raw: racadm set BIOS.IntegratedDevices.SriovGlobalEnable Enabled
+    register: result
+  - debug: var=result.stdout
+  - name: "Create job for applying changes and reboot"
+    raw: racadm jobqueue create BIOS.Setup.1-1 -r graceful
+  - pause: minutes=8 prompt="Waiting for power cycle to complete..."
+  - name: "Get current SR-IOV mode"
+    raw: racadm get BIOS.IntegratedDevices.SriovGlobalEnable
+    register: result
+  - debug: var=result.stdout

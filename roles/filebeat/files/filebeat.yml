@@ -1,0 +1,154 @@
+###################### Filebeat Configuration Example #########################
+
+# This file is an example configuration file highlighting only the most common
+# options. The filebeat.full.yml file from the same directory contains all the
+# supported options with more comments. You can use it as a reference.
+#
+# You can find the full configuration reference here:
+# https://www.elastic.co/guide/en/beats/filebeat/index.html
+
+#=========================== Filebeat prospectors =============================
+
+
+# Each - is a prospector. Most options can be set at the prospector level, so
+# you can use different prospectors for various configurations.
+# Below are the prospector specific configurations.
+filebeat:
+  prospectors:
+    - 
+      paths:
+        - "/var/log/nova/nova-compute.log"
+        - "/var/log/nova/nova-conductor.log"
+        - "/var/log/nova/nova-consoleauth.log"
+        - "/var/log/nova/nova-scheduler.log"
+      tags: ['nova', 'oslofmt']
+      document_type: nova
+    -
+      paths:
+        - "/var/log/nova-api.log"
+      tags: ['nova', 'oslofmt', 'novaapi']
+      document_type: nova
+    -
+      paths:
+        - "/var/log/neutron/server.log"
+      tags: ['neutron', 'oslofmt', 'neutronapi']
+      document_type: neutron
+    -
+      paths:
+        - "/var/log/neutron/openvswitch-agent.log"
+        - "/var/log/neutron/dhcp-agent.log"
+        - "/var/log/neutron/l3-agent.log"
+        - "/var/log/neutron/metadata-agent.log"
+      tags: ['neutron', 'oslofmt']
+      document_type: neutron
+    -
+      paths:
+        - "/var/log/keystone/keystone.log"
+      tags: ['keystone', 'keystonefmt']
+      document_type: keystone
+    -
+      paths:
+        - "/var/log/glance/api.log"
+      tags: ['glance', 'oslofmt', 'glanceapi']
+      document_type: glance
+    -
+      paths:
+        - "/var/log/glance/registry.log"
+      tags: ['glance', 'oslofmt']
+      document_type: glance
+    -
+      paths:
+        - "/var/log/ceilometer/api.log"
+      tags: ['ceilometer', 'oslofmt', 'ceilometerapi']
+      document_type: ceilometer
+    -
+      paths:
+        - "/var/log/ceilometer/central.log"
+        - "/var/log/ceilometer/alarm-notifier.log"
+        - "/var/log/ceilometer/alarm-evaluator.log"
+        - "/var/log/ceilometer/collector.log"
+        - "/var/log/ceilometer/agent-notification.log"
+      tags: ['ceilometer', 'oslofmt']
+      document_type: ceilometer
+    -
+      paths:
+        - "/var/log/cinder/api.log"
+      tags: ['cinder', 'oslofmt', 'cinderapi']
+      document_type: cinder
+    -
+      paths:
+        - "/var/log/cinder/scheduler.log"
+        - "/var/log/cinder/volume.log"
+      tags: ['cinder', 'oslofmt']
+      document_type: cinder
+    -
+      paths:
+        - "/var/log/heat/heat-api.log"
+        - "/var/log/heat/heat-engine.log"
+      tags: ['heat', 'oslofmt', 'heatapi']
+      document_type: heat
+    -
+      paths:
+        - "/var/log/heat/heat-engine.log"
+      tags: ['heat', 'oslofmt']
+      document_type: heat
+    -
+      paths:
+        - "/var/log/httpd/access_log"
+        - "/var/log/httpd/error_log"
+        - "/var/log/httpd/horizon_access.log"
+        - "/var/log/httpd/horizon_error.log"
+      tags: ['horizon']
+      document_type: horizon
+
+
+#    -
+#      paths:
+#        - "/var/log/messages"
+#      document_type: syslog
+
+# The name of the shipper that publishes the network data. It can be used to group
+# all the transactions sent by a single shipper in the web interface.
+#name:
+
+# The tags of the shipper are included in their own field with each
+# transaction published.
+#tags: ["service-X", "web-tier"]
+
+# Optional fields that you can specify to add additional information to the
+# output.
+#fields:
+#  env: staging
+
+#================================ Outputs =====================================
+
+# Configure what outputs to use when sending the data collected by the beat.
+# Multiple outputs may be used.
+
+#-------------------------- Elasticsearch output ------------------------------
+# output.elasticsearch:
+  # Array of hosts to connect to.
+  # hosts: ["localhost:9200"]
+
+  # Optional protocol and basic auth credentials.
+  #protocol: "https"
+  #username: "elastic"
+  #password: "changeme"
+
+#----------------------------- Logstash output --------------------------------
+output.logstash:
+  enabled: true
+  hosts: ["radcllog.vici.verizon.com:5044"]
+  index: filebeat
+  bulk_max_size: 50
+
+#================================ Logging =====================================
+
+# Sets log level. The default log level is info.
+# Available log levels are: critical, error, warning, info, debug
+#logging.level: debug
+
+# At debug level, you can selectively enable logging only for some components.
+# To enable all selectors use ["*"]. Examples of other selectors are "beat",
+# "publish", "service".
+#logging.selectors: ["*"]

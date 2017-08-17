@@ -1,0 +1,113 @@
+# This playbook role will enable SRIOV on VCP Lite lab installations
+# This playbook was executed in the Richardson & Ashburn labs
+# Infrastructure included 3 r630 controllers & 13 r730xd compute nodes
+# TODO: Var all the things (interface names, commands, etc)
+---
+- name: "Modify grub config to allow SRIOV"
+  when: "'compute' in group_names"
+  ini_file:
+    state: present
+    backup: yes
+    create: no
+    dest: "/etc/default/grub"
+    section: null
+    option: GRUB_CMDLINE_LINUX
+    value: "\"console=tty0 console=ttyS0,115200n8 crashkernel=auto rhgb quiet intel_iommu=on default_hugepagesz=1GB hugepagesz=1G hugepages=4\""
+    no_extra_spaces: true
+- name: "Rebuild Grub"
+  when: "'compute' in group_names"
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+- name: "Add VFs to sriov_numvfs"
+  when: "'compute' in group_names and item != bond2"
+  shell: "echo 7 > /sys/class/net/{{ item }}/device/sriov_numvfs"
+  with_items:
+    - "{{ interfaces }}"
+- name: "Add VFs to rc.local"
+  when: "'compute' in group_names and item != bond2"
+  lineinfile:
+    state: present
+    dest: /etc/rc.d/rc.local
+    insertafter: EOF
+    mode: 0755
+    create: no
+    line: "echo 7 > /sys/class/net/{{ item }}/device/sriov_numvfs"
+  with_items:
+    - "{{ interfaces }}"
+  become: true
+- name: "Restore SELinux Context"
+  when: "'compute' in group_names"
+  command: restorecon -R -v /etc/rc.d/rc.local
+- name: "Whitelist p4p1 in nova.conf"
+  when: "'compute' in group_names"
+  ini_file:
+    state: present
+    backup: yes
+    create: no
+    dest: "/etc/nova/nova.conf"
+    section: DEFAULT
+    option: pci_passthrough_whitelist
+    value: "{\"devname\":\"p4p1\",\"physical_network\":\"sriov_p4p1\"}"
+- name: "Add p5p1 to whitelist"
+  when: "'compute' in group_names"
+  lineinfile:
+    state: present
+    backup: yes
+    create: no
+    dest: "/etc/nova/nova.conf"
+    insertafter: "{\"devname\":\"p4p1\",\"physical_network\":\"sriov_p4p1\"}"
+    line: "pci_passthrough_whitelist = {\"devname\":\"p5p1\",\"physical_network\":\"sriov_p5p1\"}"
+- name: "Restart nova-compute service"
+  when: "'compute' in group_names"
+  systemd:
+    name: openstack-nova-compute
+    state: restarted
+- name: "Create ifcfg-bond2"
+  when: "'compute' in group_names"
+  file:
+    dest: "/etc/sysconfig/network-scripts/ifcfg-bond2"
+    state: touch
+    mode: 0644
+- name: "Create new interface files"
+  when: "'compute' in group_names"
+  template:
+    src: "ifcfg.j2"
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+  with_items: "{{ interfaces }}"
+- name: "Bring up new interfaces on Compute Nodes"
+  when: "'compute' in group_names"
+  shell: "ifup p4p1 && ifup p5p1 && ifup bond2"
+- name: "Modify Controller Configuration Files"
+  when: "'controller' in group_names"
+  ini_file:
+    state: present
+    backup: yes
+    create: no
+    dest: "{{ item.dest }}"
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf.ini", section: "ml2", option: "mechanism_driver", value: "openvswitch,bsn_ml2,sriovnicswitch" }
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf.ini", section: "ml2", option: "type_drivers", value: "vxlan,vlan,flat,gre" }
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf.ini", section: "ml2", option: "tenant_network_types", value: "vlan" }
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf.ini", section: "ml2_type_flat", option: "flat_networks", value: "datacentre,sriov_p4p1,sriov_p5p1" }
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf.ini", section: "ml2_type_vlan", option: "network_vlan_ranges", value: "datacentre:102:102,datacentre:103:103,datacentre:1000:2000,sriov_p4p1:3750:3999,sriov_p5p1:3750:3999" }
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf_sriov.ini", section: "ml2_sriov", option: "supported_pci_vendor_devs", value: "8086:10ed" }
+    - { dest: "/etc/neutron/plugins/ml2/ml2_conf_sriov.ini", section: "ml2_sriov", option: "agent_required", value: "False" }
+    - { dest: "/usr/lib/systemd/system/neutron-server.service", section: "Service", option: "ExecStart", value: "/usr/bin/neutron-server --config-file /usr/share/neutron/neutron-dist.conf --config-dir /usr/share/neutron/server --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugin.ini --config-file /etc/neutron/plugins/ml2/ml2_conf_sriov.ini --config-dir /etc/neutron/conf.d/common --config-dir /etc/neutron/conf.d/neutron-server --log-file /var/log/neutron/server.log" }
+    - { dest: "/etc/nova/nova.conf", section: "DEFAULT", option: "scheduler_default_filters", value: "RetryFilter,AvailabilityZoneFilter,RamFilter,DiskFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter,PciPassthroughFilter" }
+- name: "Add PCIPassthroughFilter to nova.conf"
+  when: "'controller' in group_names"
+  lineinfile:
+    state: present
+    backup: yes
+    create: no
+    dest: "/etc/nova/nova.conf"
+    insertafter: "scheduler_available_filters = nova.scheduler.filters.all_filters"
+    line: "scheduler_available_filters = nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"
+- name: "Restart nova scheduler & neutron on Controllers"
+  when: inventory_hostname | search("ctrl0")
+  command: "{{ item }}"
+  with_items:
+    - "pcs resource restart neutron-server-clone"
+    - "pcs resource restart openstack-nova-scheduler-clone"

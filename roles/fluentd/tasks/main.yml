@@ -1,0 +1,41 @@
+---
+  - name: "Push files to controllers"
+    when: "'controller' in group_names"
+    copy:
+      src: "{{item}}"
+      dest: /home/heat-admin/
+      mode: 0777
+    with_items:
+      - fluentd_bundle.tar.gz
+      - fluentd_install_controller.sh
+  - name: "Execute script to install fluentd"
+    when: "'controller' in group_names"
+    command: /bin/bash fluentd_install_controller.sh >> fluentd_install.log chdir=/home/heat-admin/
+    become: True
+  - name: "Push files to compute nodes"
+    when: "'compute' in group_names"
+    copy:
+      src: "{{item}}"
+      dest: /home/heat-admin/
+      mode: 0777
+    with_items:
+      - fluentd_bundle.tar.gz
+      - fluentd_install_compute.sh
+  - name: "Execute script to install fluentd"
+    when: "'compute' in group_names"
+    command: /bin/bash fluentd_install_compute.sh >> fluentd_install.log chdir=/home/heat-admin/
+    become: True
+  - name: "Push updated fluent.conf to controllers"
+    when: "'controller' in group_names"
+    copy:
+      src: "fluent.conf"
+      dest: /etc/fluentd/fluent.conf
+      backup: yes
+      owner: fluentd
+      group: fluentd
+      mode: 0644
+  - name: "Restart fluentd"
+    when: "'controller' in group_names"
+    systemd:
+      name: fluentd
+      state: restarted

@@ -1,0 +1,18 @@
+---
+- name: "Install fluentd to Controller Nodes"
+  hosts: rad-cl-control, wlt-cl-control, blt-cl-control
+  gather_facts: False
+  become: True
+  tasks:
+    - name: "Push files to controllers"
+      copy:
+        src: "/home/kgreenwell/automation/ansible/richardson/kibana/fluent.conf"
+        dest: /etc/fluentd/fluent.conf
+        backup: yes
+        owner: fluentd
+        group: fluentd
+        mode: 0644
+    - name: "Restart fluentd"
+      systemd:
+        name: fluentd
+        state: restarted
