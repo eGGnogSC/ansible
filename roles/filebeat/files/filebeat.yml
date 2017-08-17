@@ -138,7 +138,7 @@ filebeat:
 #----------------------------- Logstash output --------------------------------
 output.logstash:
   enabled: true
-  hosts: ["radcllog.vici.verizon.com:5044"]
+  hosts: ["your.domain.com:5044"]
   index: filebeat
   bulk_max_size: 50
 
