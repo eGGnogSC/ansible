@@ -111,8 +111,8 @@ cat << EOF >/etc/fluentd/fluent.conf
   @type forward
   heartbeat_type tcp
   <server>
-    name radcllog.vici.verizon.com
-    host radcllog.vici.verizon.com
+    name <server URL here> 
+    host <server url here> 
     port 4000
   </server>
 </match>

@@ -1,6 +1,6 @@
 ---
 - name: "Install fluentd to Controller Nodes"
-  hosts: rad-cl-control, wlt-cl-control, blt-cl-control
+  hosts: 
   gather_facts: False
   become: True
   tasks:
